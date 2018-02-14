@@ -41,6 +41,10 @@ int serial_setup(int fd, speed_t speed)
     HANDLE hCom = (HANDLE)fd;
 
     dcb.DCBlength = sizeof(dcb);
+    if (!GetCommState(hCom, &dcb))
+    {
+        return -1;
+    }
 
     dcb.BaudRate = speed;
     dcb.ByteSize = 8;
@@ -66,11 +70,11 @@ int serial_setup(int fd, speed_t speed)
     {
         return -1;
     }
-    
+
 #elif defined(LINUX)
     struct termios tty;
 
-    memset(&tty, 0x00, sizeof(tty));
+    memset(&tty, 0, sizeof(tty));
     cfmakeraw(&tty);
 
     tty.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
@@ -83,11 +87,17 @@ int serial_setup(int fd, speed_t speed)
         case 9600:
             speed = B9600;
             break;
+        case 19200:
+            speed = B19200;
+            break;
         case 38400:
             speed = B38400;
             break;
         case 115200:
             speed = B115200;
+            break;
+        case 230400:
+            speed = B230400;
             break;
         case 57600:
         default:
@@ -95,8 +105,14 @@ int serial_setup(int fd, speed_t speed)
             break;
     }
 
-    cfsetospeed(&tty, B57600);
-    cfsetispeed(&tty, B57600);
+    if (cfsetospeed(&tty, speed) < 0)
+    {
+        return -1;
+    }
+    if (cfsetispeed(&tty, speed) < 0)
+    {
+        return -1;
+    }
 
     // Completely non-blocking read
     // VMIN = 0 and VTIME = 0
@@ -162,13 +178,10 @@ int serial_set_read_timeout(int fd, uint32_t timeoutMs)
 #elif defined(LINUX)
     struct termios tty;
 
-    memset(&tty, 0x00, sizeof(tty));
-    cfmakeraw(&tty);
-
-    tty.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
-    tty.c_cflag |= (CS8 | CLOCAL | CREAD);
-    tty.c_oflag = 0;
-    tty.c_lflag = 0;
+    if (tcgetattr(fd, &tty) < 0)
+    {
+        return -1;
+    }
 
     // Completely non-blocking read
     // VMIN = 0 and VTIME > 0
