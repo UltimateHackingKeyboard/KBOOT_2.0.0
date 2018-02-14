@@ -38,8 +38,8 @@ INCLUDES += $(BOOT_ROOT)/validation/blhost/src \
 			$(BOOT_ROOT)/src/drivers/common \
 			$(BOOT_ROOT)/src/bm_usb
 
-CXXFLAGS := -D LINUX -D BOOTLOADER_HOST -std=c++11
-CFLAGS   := -std=c99 -D LINUX -D BOOTLOADER_HOST -D _GNU_SOURCE
+CXXFLAGS := -D BOOTLOADER_HOST -std=c++11
+CFLAGS   := -std=c99 -D BOOTLOADER_HOST -D _GNU_SOURCE
 LD       := g++
 
 SOURCES := $(BOOT_ROOT)/validation/blhost/src/blhost.cpp \
@@ -56,7 +56,6 @@ SOURCES := $(BOOT_ROOT)/validation/blhost/src/blhost.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/format_string.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/GHSSecInfo.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/GlobMatcher.cpp \
-		   $(BOOT_ROOT)/src/blfwk/src/hid-linux.c \
 		   $(BOOT_ROOT)/src/blfwk/src/jsoncpp.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/Logging.cpp \
 		   $(BOOT_ROOT)/src/blfwk/src/options.cpp \
@@ -98,6 +97,23 @@ CXXFLAGS += -g
 LDFLAGS += -g
 else
 DEBUG_OR_RELEASE := Release
+CFLAGS += -Os
+CXXFLAGS += -Os
+LDFLAGS += -Os
+endif
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	CXXFLAGS += -D LINUX
+	CFLAGS += -D LINUX
+	SOURCES += $(BOOT_ROOT)/src/blfwk/src/hid-linux.c
+	LDFLAGS += -ludev
+endif
+ifeq ($(UNAME_S),Darwin)
+	CXXFLAGS += -D MACOSX
+	CFLAGS += -D MACOSX
+	SOURCES += $(BOOT_ROOT)/src/blfwk/src/hid-mac.c
+	LDFLAGS += -lhidapi -framework IOKit -framework CoreFoundation
 endif
 
 TARGET_OUTPUT_ROOT := $(OUTPUT_ROOT)/$(DEBUG_OR_RELEASE)
@@ -197,10 +213,10 @@ $(OBJS_ROOT)/%.o: $(BOOT_ROOT)/%.s
 # since order matters.
 $(MAKE_TARGET): $(OBJECTS_ALL)
 	@$(call printmessage,link,Linking, $(APP_NAME))
-	$(at)$(LD) $(LDFLAGS) \
-          $(OBJECTS_ALL) \
-          -lc -lstdc++ -lm -ludev \
-          -o $@
+	$(at)$(LD) \
+		$(OBJECTS_ALL) \
+		-lc -lstdc++ -lm \
+		-o $@ $(LDFLAGS)
 	@echo "Output binary:" ; echo "  $(APP_NAME)"
 
 #-------------------------------------------------------------------------------
