@@ -127,6 +127,22 @@ int serial_setup(int fd, speed_t speed)
     }
 
 #elif defined(MACOSX)
+    struct termios tty;
+
+    memset(&tty, 0, sizeof(tty));
+
+    if (tcgetattr(fd, &tty) < 0)
+    {
+        return -1;
+    }
+
+    tty.c_cflag |= (CLOCAL | CREAD); // Enable local mode and serial data receipt
+
+    if (tcsetattr(fd, TCSAFLUSH, &tty) < 0)
+    {
+        return -1;
+    }
+
     return ioctl(fd, IOSSIOSPEED, &speed);
 #endif // WIN32
 
@@ -308,7 +324,7 @@ int serial_open(char *port)
         fd = (int)hCom;
     }
 #else
-    fd = open(port, O_RDWR | O_NOCTTY);
+    fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd == -1)
     {
         fprintf(stderr, "Could not open serial port.");
