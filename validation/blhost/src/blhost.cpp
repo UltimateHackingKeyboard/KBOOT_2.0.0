@@ -217,7 +217,11 @@ public:
         : m_argc(argc)
         , m_argv(argv)
         , m_cmdv()
+#if defined(WIN32)
         , m_comPort("COM1")
+#else
+        , m_comPort("/dev/ttyACM0")
+#endif
         , m_comSpeed(57600)
         , m_useBusPal(false)
         , m_busPalConfig()
