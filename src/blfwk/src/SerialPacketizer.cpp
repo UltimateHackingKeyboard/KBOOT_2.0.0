@@ -36,9 +36,10 @@
 #ifdef WIN32
 #include <windows.h>
 #endif
-#ifdef LINUX
+#if defined(LINUX) || defined(MACOSX)
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 #endif
 
 using namespace blfwk;
@@ -125,10 +126,20 @@ void SerialPacketizer::host_delay(uint32_t milliseconds)
 // @todo implement for non-win32
 #if defined(WIN32)
     Sleep(milliseconds);
-#elif defined(LINUX)
+#else
     usleep(milliseconds * 1000);
 #endif
 }
+
+#if defined(LINUX) || defined(MACOSX)
+uint64_t current_timestamp()
+{
+    struct timeval te;
+    gettimeofday(&te, NULL); // Get current time
+    uint64_t milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // Calculate milliseconds
+    return milliseconds;
+}
+#endif
 
 // See SerialPacketizer.h for documentation of this method.
 status_t SerialPacketizer::ping(int retries, unsigned int delay, ping_response_t *pingResponse, int comSpeed)
@@ -150,8 +161,10 @@ status_t SerialPacketizer::ping(int retries, unsigned int delay, ping_response_t
         {
             double timeout = 0.500;
             double duration = 0.0;
-#if defined(WIN32) || defined(LINUX)
+#if defined(WIN32)
             clock_t start = clock();
+#else
+            uint64_t start = current_timestamp();
 #endif
 
             // Try for half a second to get a response from the ping.
@@ -169,8 +182,8 @@ status_t SerialPacketizer::ping(int retries, unsigned int delay, ping_response_t
                 host_delay(kReadDelayMilliseconds);
 #if defined(WIN32)
                 duration = (double)(clock() - start) / CLOCKS_PER_SEC; // Windows: CLOCKS_PER_SEC = 1,000.
-#elif defined(LINUX)
-                duration = (double)(clock() - start) / (CLOCKS_PER_SEC / 1000); // Linux: CLOCKS_PER_SEC = 1,000,000.
+#else
+                duration = (double)(current_timestamp() - start) / 1000.0; // Linux and Mac
 #endif
             }
 
@@ -564,8 +577,10 @@ status_t SerialPacketizer::read_start_byte(framing_header_t *header)
 {
     double timeout = (double)m_packetTimeoutMs / 1000;
     double duration = 0.0;
-#if defined(WIN32) || defined(LINUX)
+#if defined(WIN32)
     clock_t start = clock();
+#else
+    uint64_t start = current_timestamp();
 #endif
 
     // Read until start byte found.
@@ -591,8 +606,8 @@ status_t SerialPacketizer::read_start_byte(framing_header_t *header)
 
 #if defined(WIN32)
         duration = (double)(clock() - start) / CLOCKS_PER_SEC; // Windows: CLOCKS_PER_SEC = 1,000.
-#elif defined(LINUX)
-        duration = (double)(clock() - start) / (CLOCKS_PER_SEC / 1000);         // Linux: CLOCKS_PER_SEC = 1,000,000.
+#else
+        duration = (double)(current_timestamp() - start) / 1000.0; // Linux and Mac
 #endif
     }
 

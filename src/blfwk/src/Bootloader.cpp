@@ -92,7 +92,7 @@ Bootloader::Bootloader(const Peripheral::PeripheralConfigData &config)
                 // Send initial ping.
                 try
                 {
-                    ping(0, 0, config.comPortSpeed);
+                    ping(2, 1000, config.comPortSpeed); // Ping 3 times with a delay of 1 s between the ping commands
                 }
                 catch (const std::exception &e)
                 {

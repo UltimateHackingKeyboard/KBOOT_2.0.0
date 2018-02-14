@@ -38,7 +38,7 @@
 
 #if defined(WIN32)
 #include "windows.h"
-#elif defined(LINUX)
+#else
 #include "signal.h"
 #endif
 
@@ -217,7 +217,11 @@ public:
         : m_argc(argc)
         , m_argv(argv)
         , m_cmdv()
+#if defined(WIN32)
         , m_comPort("COM1")
+#else
+        , m_comPort("/dev/ttyACM0")
+#endif
         , m_comSpeed(57600)
         , m_useBusPal(false)
         , m_busPalConfig()
@@ -237,7 +241,7 @@ public:
 #if defined(WIN32)
         // set ctrl handler for Ctrl + C and Ctrl + Break signal
         SetConsoleCtrlHandler((PHANDLER_ROUTINE)ctrlHandler, TRUE);
-#elif defined(LINUX)
+#else
         // set ctrl handler for Ctrl + C signal, Ctrl + Break doesnot take effect under LINUX system.
         signal(SIGINT, ctrlPlusCHandler);
 #endif
@@ -254,7 +258,7 @@ protected:
 //! @brief Handler for Ctrl signals
 #if defined(WIN32)
     static BOOL ctrlHandler(DWORD ctrlType);
-#elif defined(LINUX)
+#else
     static void ctrlPlusCHandler(int msg);
 #endif
     static void displayProgress(int percentage, int segmentIndex, int segmentCount);
@@ -304,7 +308,7 @@ BOOL BlHost::ctrlHandler(DWORD ctrlType)
             return false;
     }
 }
-#elif defined(LINUX)
+#else
 void BlHost::ctrlPlusCHandler(int msg)
 {
     if (msg == SIGINT)
